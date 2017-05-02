@@ -2,7 +2,7 @@
   "name": "rx-scroll",
   "version": "0.0.1",
   "description": "RxJS Backed Scroll Listeners",
-  "main": "index.js",
+  "main": "dist/index.js",
   "author": "Marc Ammann <marc@pxnw.co>",
   "license": "MIT",
   "scripts": {
