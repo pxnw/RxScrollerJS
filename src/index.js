@@ -174,8 +174,8 @@ export class ScrollController {
   calculateScrollSize(container) {
     var scrollSize = null
     if (container == window) {
-      var body = document.body,
-      html = document.documentElement;
+      let body = document.body
+      let html = document.documentElement
 
       scrollSize = {
         height: Math.max( body.scrollHeight, body.offsetHeight, html.clientHeight, html.scrollHeight, html.offsetHeight ),
@@ -536,7 +536,7 @@ export class ScrollBehavior {
       applyVertical: true,
       applyHorizontal: false,
       scrollStartOffset: {x: 0, y: 0},
-      scrollDistance: this._fullScrollSize,
+      scrollDistance: { width: this._fullScrollSize.width - this._containerSize.width, height: this._fullScrollSize.height - this._containerSize.height },
     })
 
     this._sizeE = document.createElement('div')
