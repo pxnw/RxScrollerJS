@@ -7,7 +7,8 @@
   "license": "MIT",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "babel src --presets babel-preset-es2015 --out-dir dist"
+    "build": "babel src --presets babel-preset-es2015 --out-dir dist",
+    "prepublish": "yarn run build"
   },
   "dependencies": {
     "rx-dom": "^7.0.3",
