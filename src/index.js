@@ -20,10 +20,7 @@ export class ScrollController {
 
     this._options = options
     this._elements = []
-    this._scrollOffset = this.calculateScrollOffset(this._container)
-    this._containerSize = this.calculateContainerSize(this._container)
-    this._scrollSize = this.calculateScrollSize(this._container)
-    this._scrollProgress = this.calculateScrollProgress(this._scrollSize, this._containerSize, this._scrollOffset)
+    this.updateSizeProperties(this._container)
 
     this._update$ = new Rx.BehaviorSubject({
       updateAll: true, 
@@ -114,8 +111,16 @@ export class ScrollController {
     // }
   }
 
+  updateSizeProperties(container) {
+    this._scrollOffset = this.calculateScrollOffset(container)
+    this._containerSize = this.calculateContainerSize(container)
+    this._scrollSize = this.calculateScrollSize(container)
+    this._scrollProgress = this.calculateScrollProgress(this._scrollSize, this._containerSize, this._scrollOffset)
+  }
+
   set needsResize(needsResize) {
     if (needsResize) {
+      this.updateSizeProperties(this._container)
       this.resize$.onNext(this._containerSize)
     }
   }
@@ -144,7 +149,7 @@ export class ScrollController {
       return size.width != c._containerSize.width || size.height != c._containerSize.height
     }).map((e) => {
       let size = e.size
-      c._containerSize = size
+      this.updateSizeProperties(c._container)
       this.resize$.onNext(size)
 
       return [size, e]
@@ -181,6 +186,8 @@ export class ScrollController {
         height: Math.max( body.scrollHeight, body.offsetHeight, html.clientHeight, html.scrollHeight, html.offsetHeight ),
         width: Math.max( body.scrollWidth, body.offsetWidth, html.clientWidth, html.scrollWidth, html.offsetWidth )
       }
+
+      // console.log("Scroll Size: ", scrollSize)
     } else {
       scrollSize = {
         height: container.scrollHeight,
@@ -221,7 +228,6 @@ export class ScrollElement {
     .filter((needsUpdate) => {
       return needsUpdate
     })
-    // .subscribeOn(Rx.Scheduler.requestAnimationFrame)
     .subscribe((v) => {
       this.update()
       this.needsUpdate = false
@@ -535,43 +541,47 @@ export class ScrollBehavior {
       velocity: 1,
       applyVertical: true,
       applyHorizontal: false,
-      scrollStartOffset: {x: 0, y: 0},
-      scrollDistance: { width: this._fullScrollSize.width - this._containerSize.width, height: this._fullScrollSize.height - this._containerSize.height },
+      defaultScrollStartOffset: { x: 0, y: 0 },
+      defaultScrollDistance: this.defaultScrollDistance,
+      scrollStartOffset: null,
+      scrollDistance: null,
     })
 
     this._sizeE = document.createElement('div')
     this.scrollOptions = {scrollStartOffset: this._options.scrollStartOffset, scrollDistance: this._options.scrollDistance}
     
     this._containerSize$.subscribe((newSize) => {
-      this.updateScrollProperties(this._sizeE, this._cssStartOffset, this._cssDistance)
+      this.updateContainerProperties(controller)
+      this._options.defaultScrollDistance = this.defaultScrollDistance
+      this.updateScrollProperties(this._options)
       this.viewport$.onNext(newSize)
-      // console.log(newSize)
     })
 
     this.progress$ = new Rx.BehaviorSubject(this.progress)
     
   }
 
-  updateScrollProperties(e, startOffset, distance) {
-      let rect = cssBoundingRect(this._sizeE, startOffset, distance)
-      this._scrollStartOffset = {x: rect.left, y: rect.top}
-      this._scrollDistance = {width: rect.width, height: rect.height}
+  updateScrollProperties(options) {
+    var startOffset = options.scrollStartOffset || options.defaultScrollStartOffset
+    startOffset.x = cssSizeValue(startOffset.x)
+    startOffset.y = cssSizeValue(startOffset.y)
+    this._cssStartOffset = startOffset
+
+    var distance = options.scrollDistance || options.defaultScrollDistance
+    distance.width = cssSizeValue(distance.width)
+    distance.height = cssSizeValue(distance.height)
+    this._cssDistance = distance
+  
+    let rect = cssBoundingRect(this._sizeE, startOffset, distance)
+    this._scrollStartOffset = {x: rect.left, y: rect.top}
+    this._scrollDistance = {width: rect.width, height: rect.height}
   }
 
   set scrollOptions(props) {
-    var startOffset = props.scrollStartOffset
-    startOffset.x = cssSizeValue(startOffset.x)
-    startOffset.y = cssSizeValue(startOffset.y)
+    this._options.scrollDistance = props.scrollDistance
+    this._options.scrollStartOffset = props.scrollStartOffset
 
-    this._cssStartOffset = startOffset
-
-    var distance = props.scrollDistance
-    distance.width = cssSizeValue(distance.width)
-    distance.height = cssSizeValue(distance.height)
-
-    this._cssDistance = distance
-
-    this.updateScrollProperties(this._sizeE, startOffset, distance)
+    this.updateScrollProperties(this._options)
   }
 
   get progress() {
@@ -584,16 +594,23 @@ export class ScrollBehavior {
     return progress
   }
 
+  get defaultScrollDistance() {
+    return { width: this._fullScrollSize.width - this._containerSize.width, height: this._fullScrollSize.height - this._containerSize.height }
+  }
+
+  updateContainerProperties(controller) {
+    this._fullScrollSize = controller.scrollSize
+    this._fullScrollProgress = controller.scrollProgress
+    this._containerSize = controller.containerSize
+  }
+
   set controller(controller) {
     if (this._controllerSubscription != null) {
       this._controller.update$.unusbscribe(this._controllerSubscription)
     }
 
     this._controller = controller
-
-    this._fullScrollSize = controller.scrollSize
-    this._fullScrollProgress = controller.scrollProgress
-    this._containerSize = controller.containerSize
+    this.updateContainerProperties(controller)
     
     controller.resize$.subscribe(this._containerSize$)
     
