@@ -7,7 +7,10 @@ const cssSizeValue = function(attr) {
 
 const cssBoundingRect = function(e, origin, size) {
   e.setAttribute("style", "visibility:hidden;position:fixed;top:"+origin.y+";left:"+origin.x+";width:"+size.width+";height:"+size.height)
-  document.firstElementChild.appendChild(e)
+  if (document.firstElementChild != null) {
+    document.firstElementChild.appendChild(e)
+  }
+  
   let rect = e.getBoundingClientRect()
   e.remove()
 
